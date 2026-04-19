@@ -11,6 +11,19 @@ export default defineConfig(({ mode }) => ({
     hmr: {
       overlay: false,
     },
+    proxy: {
+      "/api": {
+        target: "http://localhost:3001",
+        changeOrigin: true,
+      },
+      "/lab/": {
+        target: "http://localhost:3001",
+        changeOrigin: true,
+        ws: true,
+      },
+      // Do not proxy /ws: binary PTY frames are corrupted by the dev proxy; the client uses
+      // buildTerminalWebSocketUrl() → ws://host:3001/ws in DEV (see src/lib/labApi.ts).
+    },
   },
   plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),
   resolve: {

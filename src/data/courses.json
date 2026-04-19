@@ -1,0 +1,22 @@
+[
+  {
+    "id": "docker-basics",
+    "plan": "pro",
+    "title": "Docker Basics",
+    "description": "Pull images, run containers, and verify workloads inside the lab VM.",
+    "labs": [
+      { "id": "docker-1", "tool": "docker", "title": "Images & pull" },
+      { "id": "docker-2", "tool": "docker", "title": "Run & publish" }
+    ]
+  },
+  {
+    "id": "shell-to-web",
+    "plan": "free",
+    "title": "From Shell to Web",
+    "description": "Linux fundamentals, then serve a static page with nginx.",
+    "labs": [
+      { "id": "linux-1", "tool": "linux", "title": "Shell practice" },
+      { "id": "nginx-1", "tool": "nginx", "title": "Web server lab" }
+    ]
+  }
+]

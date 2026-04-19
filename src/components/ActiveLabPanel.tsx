@@ -1,87 +1,197 @@
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Timer, Plus, Square, Terminal, ExternalLink } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import { LabTerminal } from "@/components/LabTerminal";
+import { LabInstructionsPanel } from "@/components/LabInstructionsPanel";
+import { LabHeader } from "@/components/LabHeader";
+import { getHintLevels, type LabToolKey } from "@/lib/labGuide";
+import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
-interface ActiveLabPanelProps {
-  toolName: string;
-  toolIcon: LucideIcon;
-  onDestroy: () => void;
+/** Live countdown shown in header — HH:MM:SS */
+function formatCountdownHms(totalSeconds: number): string {
+  if (totalSeconds <= 0) return "00:00:00";
+  const h = Math.floor(totalSeconds / 3600);
+  const m = Math.floor((totalSeconds % 3600) / 60);
+  const s = totalSeconds % 60;
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const hPart = h > 99 ? String(h) : pad(h);
+  return `${hPart}:${pad(m)}:${pad(s)}`;
 }
 
-export function ActiveLabPanel({ toolName, toolIcon: Icon, onDestroy }: ActiveLabPanelProps) {
-  const [seconds, setSeconds] = useState(59 * 60 + 45);
+interface ActiveLabPanelProps {
+  labTitle: string;
+  toolKey: LabToolKey;
+  toolIcon: LucideIcon;
+  containerName: string;
+  terminalUrl: string;
+  appUrl: string | null;
+  sessionId: string;
+  userId: string;
+  courseId?: string;
+  courseLabId?: string;
+  /** Accepted for compatibility with callers; unused in this chrome. */
+  publishedContainerPorts?: number[];
+  expiresAt: string;
+  onDestroy: () => Promise<void> | void;
+  onResetLab: () => Promise<void> | void;
+  hasNextLab?: boolean;
+  nextLabName?: string;
+  onTryNextLab?: () => void | Promise<void>;
+}
+
+export function ActiveLabPanel({
+  labTitle,
+  toolKey,
+  toolIcon: Icon,
+  containerName,
+  terminalUrl,
+  sessionId,
+  userId,
+  courseId,
+  courseLabId,
+  expiresAt,
+  onDestroy,
+  onResetLab,
+  hasNextLab = false,
+  nextLabName,
+  onTryNextLab,
+}: ActiveLabPanelProps) {
+  const [secondsLeft, setSecondsLeft] = useState(() =>
+    Math.max(0, Math.floor((new Date(expiresAt).getTime() - Date.now()) / 1000)),
+  );
+  const [destroying, setDestroying] = useState(false);
+  const [resetting, setResetting] = useState(false);
+  const [mobilePanel, setMobilePanel] = useState<"steps" | "terminal">("steps");
+  const [terminalFocusNonce, setTerminalFocusNonce] = useState(0);
+  const destroyingRef = useRef(false);
+
+  const hintLevels = useMemo(() => getHintLevels(toolKey), [toolKey]);
+  const maxHints = hintLevels.length;
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      setSeconds((s) => (s > 0 ? s - 1 : 0));
+    destroyingRef.current = destroying;
+  }, [destroying]);
+
+  useEffect(() => {
+    setSecondsLeft(Math.max(0, Math.floor((new Date(expiresAt).getTime() - Date.now()) / 1000)));
+  }, [expiresAt]);
+
+  useEffect(() => {
+    const interval = window.setInterval(() => {
+      setSecondsLeft(Math.max(0, Math.floor((new Date(expiresAt).getTime() - Date.now()) / 1000)));
     }, 1000);
-    return () => clearInterval(interval);
+    return () => window.clearInterval(interval);
+  }, [expiresAt]);
+
+  const bumpTerminalFocus = useCallback(() => {
+    setTerminalFocusNonce((n) => n + 1);
+    if (typeof window !== "undefined" && window.matchMedia("(max-width: 1023px)").matches) {
+      setMobilePanel("terminal");
+    }
   }, []);
 
-  const mm = String(Math.floor(seconds / 60)).padStart(2, "0");
-  const ss = String(seconds % 60).padStart(2, "0");
+  const onStepHint = useCallback(
+    (stepIndex: number) => {
+      if (maxHints === 0) {
+        toast.message("No hints available for this lab yet.");
+        return;
+      }
+      const idx = Math.min(Math.max(stepIndex, 0), maxHints - 1);
+      const level = hintLevels[idx];
+      if (!level) {
+        toast.message("No hint available for this step.");
+        return;
+      }
+      const detail = level.lines.length ? `\n${level.lines.join("\n")}` : "";
+      toast.message(`Hint: ${level.title}${detail}`, { duration: 9000 });
+    },
+    [hintLevels, maxHints],
+  );
+
+  const handleResetLab = useCallback(async () => {
+    setResetting(true);
+    try {
+      await onResetLab();
+    } finally {
+      setResetting(false);
+    }
+  }, [onResetLab]);
+
+  const handleDestroy = useCallback(async () => {
+    destroyingRef.current = true;
+    setDestroying(true);
+    try {
+      await onDestroy();
+    } finally {
+      setDestroying(false);
+      destroyingRef.current = false;
+    }
+  }, [onDestroy]);
 
   return (
-    <div className="rounded-xl border border-primary/20 bg-card glow-primary overflow-hidden">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 border-b border-border">
-        <div className="flex items-center gap-3">
-          <div className="relative">
-            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
-              <Icon className="w-5 h-5" />
-            </div>
-            <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-success border-2 border-card animate-pulse" />
-          </div>
-          <div>
-            <p className="text-foreground font-semibold">{toolName} Lab</p>
-            <p className="text-xs text-muted-foreground">Running &middot; Lab Instance</p>
-          </div>
-        </div>
+    <div className="flex min-h-0 flex-col overflow-hidden rounded-xl border border-border/80 bg-card shadow-[0_0_40px_-16px_hsl(190_90%_45%/0.18)] max-h-[calc(100dvh-4.5rem)] min-h-[min(560px,85dvh)]">
+      <LabHeader
+        labTitle={labTitle}
+        toolIcon={Icon}
+        secondsLeft={secondsLeft}
+        formatRemaining={formatCountdownHms}
+        resetting={resetting}
+        destroying={destroying}
+        onResetLab={handleResetLab}
+        onDestroy={handleDestroy}
+      />
 
-        <div className="flex items-center gap-3 flex-wrap">
-          <div className="flex items-center gap-2 bg-secondary rounded-lg px-3 py-2 font-mono text-sm">
-            <Timer className="w-4 h-4 text-primary" />
-            <span className={`font-semibold ${seconds < 300 ? "text-destructive" : "text-foreground"}`}>
-              {mm}:{ss}
-            </span>
-            <span className="text-muted-foreground text-xs">remaining</span>
-          </div>
-          <Button variant="outline" size="sm" className="gap-1.5 border-border text-secondary-foreground hover:bg-secondary">
-            <Plus className="w-3.5 h-3.5" />
-            Extend Time
+      <div className="flex min-h-0 flex-1 flex-col gap-3 p-3 sm:p-4 lg:flex-row lg:items-stretch lg:gap-5 lg:p-5">
+        <div className="flex shrink-0 gap-2 lg:hidden">
+          <Button
+            type="button"
+            variant={mobilePanel === "steps" ? "default" : "outline"}
+            size="sm"
+            className="flex-1"
+            onClick={() => setMobilePanel("steps")}
+          >
+            Steps
           </Button>
           <Button
-            variant="destructive"
+            type="button"
+            variant={mobilePanel === "terminal" ? "default" : "outline"}
             size="sm"
-            className="gap-1.5 glow-destructive"
-            onClick={onDestroy}
+            className="flex-1"
+            onClick={() => setMobilePanel("terminal")}
           >
-            <Square className="w-3.5 h-3.5" />
-            Destroy Lab
+            Terminal
           </Button>
         </div>
-      </div>
 
-      {/* Terminal placeholder */}
-      <div className="p-5">
-        <div className="rounded-lg bg-background border border-border overflow-hidden">
-          <div className="flex items-center gap-2 px-4 py-2.5 border-b border-border bg-secondary/50">
-            <Terminal className="w-3.5 h-3.5 text-muted-foreground" />
-            <span className="text-xs text-muted-foreground font-mono">terminal — {toolName.toLowerCase()}-lab-01</span>
-            <button className="ml-auto text-muted-foreground hover:text-foreground transition-colors">
-              <ExternalLink className="w-3.5 h-3.5" />
-            </button>
-          </div>
-          <div className="p-4 font-mono text-sm leading-relaxed min-h-[140px]">
-            <p className="text-success">$ Connecting to {toolName.toLowerCase()}-lab-01.devops-labs.io...</p>
-            <p className="text-muted-foreground mt-1">Establishing secure tunnel...</p>
-            <p className="text-success mt-1">✓ Connected successfully</p>
-            <p className="text-muted-foreground mt-1">
-              <span className="text-terminal">developer@lab-01:~$</span>{" "}
-              <span className="animate-pulse">▌</span>
-            </p>
-          </div>
+        <div
+          className={cn(
+            "flex min-h-0 min-w-0 lg:w-[35%] lg:max-w-[min(100%,440px)] lg:shrink-0",
+            mobilePanel !== "steps" && "hidden lg:flex",
+          )}
+        >
+          <LabInstructionsPanel
+            toolKey={toolKey}
+            sessionId={sessionId}
+            userId={userId}
+            courseId={courseId}
+            courseLabId={courseLabId}
+            onRequestTerminalFocus={bumpTerminalFocus}
+            onStepHint={onStepHint}
+            hasNextLab={hasNextLab}
+            nextLabName={nextLabName}
+            onTryNextLab={onTryNextLab}
+            className="h-full min-h-[min(320px,50dvh)] w-full lg:min-h-0"
+          />
+        </div>
+
+        <div className={cn("flex min-h-0 min-w-0 flex-1 flex-col", mobilePanel !== "terminal" && "hidden lg:flex")}>
+          <LabTerminal
+            wsUrl={terminalUrl}
+            containerName={containerName}
+            focusNonce={terminalFocusNonce}
+            className="min-h-[min(280px,48dvh)] flex-1 lg:min-h-0"
+          />
         </div>
       </div>
     </div>

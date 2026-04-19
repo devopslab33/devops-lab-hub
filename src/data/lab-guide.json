@@ -1,0 +1,314 @@
+{
+  "linux": {
+    "instructionTitle": "Shell exploration",
+    "welcomeTerminal": "Welcome to Linux Lab",
+    "steps": [
+      {
+        "id": "step-1",
+        "title": "See your user",
+        "description": "Run whoami to see your user.",
+        "validation": {
+          "type": "command",
+          "command": "whoami",
+          "expected": "root"
+        }
+      },
+      {
+        "id": "step-2",
+        "title": "Print working directory",
+        "description": "Try pwd and ls -la in the terminal.",
+        "validation": {
+          "type": "command",
+          "command": "pwd",
+          "expected": "/"
+        }
+      },
+      {
+        "id": "step-3",
+        "title": "Create a practice directory",
+        "description": "Run: mkdir practice && cd practice (from your home or /).",
+        "validation": {
+          "type": "command",
+          "command": "bash -lc 'test -d practice -o -d \"$HOME/practice\" -o -d /root/practice && echo PRACTICE_OK'",
+          "expected": "PRACTICE_OK"
+        }
+      }
+    ],
+    "hintLevels": [
+      {
+        "title": "Concept",
+        "lines": [
+          "Learn who you are on the system, where you are in the filesystem, and how to list files."
+        ]
+      },
+      {
+        "title": "Commands",
+        "lines": ["whoami", "pwd", "ls -la"]
+      },
+      {
+        "title": "Full example",
+        "lines": ["mkdir -p demo && cd demo && touch hello.txt && ls -la"]
+      }
+    ],
+    "detect": {
+      "source": "\\b(whoami|pwd|\\bls\\b)\\b",
+      "flags": "i"
+    }
+  },
+  "git": {
+    "instructionTitle": "Your first Git repo",
+    "welcomeTerminal": "Welcome to Git Lab",
+    "steps": [
+      {
+        "id": "step-1",
+        "title": "Initialize a repository",
+        "description": "Run git init in a project directory.",
+        "validation": {
+          "type": "command",
+          "command": "git rev-parse --is-inside-work-tree 2>/dev/null",
+          "expected": "true"
+        }
+      },
+      {
+        "id": "step-2",
+        "title": "Stage a file",
+        "description": "Create a file and run git add on it.",
+        "validation": {
+          "type": "command",
+          "command": "bash -lc 'git diff --cached --quiet; echo exit:$?'",
+          "expected": "exit:1"
+        }
+      },
+      {
+        "id": "step-3",
+        "title": "Create a commit",
+        "description": "Commit with git commit -m \"…\".",
+        "validation": {
+          "type": "command",
+          "command": "git log -1 2>/dev/null",
+          "expected": "commit"
+        }
+      }
+    ],
+    "hintLevels": [
+      {
+        "title": "Concept",
+        "lines": [
+          "Create a new directory, turn it into a Git repo, track a file, and record your first commit."
+        ]
+      },
+      {
+        "title": "Commands",
+        "lines": ["git init my-project && cd my-project", "echo 'Hello DevOps' > README.md", "git add README.md"]
+      },
+      {
+        "title": "Full example",
+        "lines": ["git commit -m \"Initial commit\""]
+      }
+    ],
+    "detect": {
+      "source": "\\bgit\\s+commit\\b",
+      "flags": "i"
+    }
+  },
+  "docker": {
+    "instructionTitle": "Run your first container",
+    "welcomeTerminal": "Welcome to Docker Lab",
+    "steps": [
+      {
+        "id": "step-1",
+        "interactionType": "command",
+        "title": "Pull the nginx image",
+        "description": "Download the official nginx image from Docker Hub.",
+        "why": "You need the image locally before you can start a container from it — same as installing an app before opening it.",
+        "displayCommand": "docker pull nginx",
+        "failureHint": "Pull the image first, wait for it to finish, then click Check.",
+        "failurePatterns": [
+          {
+            "contains": "Cannot connect",
+            "title": "Docker isn’t reachable",
+            "hint": "Start Docker Desktop (or the Docker service), wait until it’s healthy, then try again."
+          }
+        ],
+        "validation": {
+          "type": "command",
+          "command": "bash -lc \"docker images --format '{{.Repository}}' 2>/dev/null | grep -qx nginx && echo STEP_OK || echo STEP_FAIL\"",
+          "expected": "STEP_OK"
+        }
+      },
+      {
+        "id": "step-2",
+        "interactionType": "command",
+        "title": "Run nginx in the background",
+        "description": "Publish container port 80 to host port 8080 so you can reach the app.",
+        "why": "`-d` runs it detached; `-p 8080:80` maps ports so your browser (or curl) can hit nginx.",
+        "displayCommand": "docker run -d -p 8080:80 nginx",
+        "failureHint": "Run the container with port mapping, wait a second for it to start, then click Check.",
+        "validation": {
+          "type": "command",
+          "command": "bash -lc \"docker ps --format '{{.Image}}' 2>/dev/null | grep -E '^nginx(:|$|@)' >/dev/null && echo STEP_OK || echo STEP_FAIL\"",
+          "expected": "STEP_OK"
+        }
+      },
+      {
+        "id": "step-3",
+        "interactionType": "command",
+        "title": "List running containers",
+        "description": "Use Docker’s listing command to see what’s running.",
+        "why": "`docker ps` is how you verify containers, names, ports, and uptime — your day-to-day status command.",
+        "displayCommand": "docker ps",
+        "failureHint": "Run docker ps in the terminal and confirm you see the nginx container, then click Check.",
+        "validation": {
+          "type": "command",
+          "command": "bash -lc \"docker ps 2>/dev/null | head -1 | grep -q CONTAINER && echo STEP_OK || echo STEP_FAIL\"",
+          "expected": "STEP_OK"
+        }
+      },
+      {
+        "id": "step-4",
+        "interactionType": "question",
+        "title": "Quick recall",
+        "description": "Lock in what you just practiced.",
+        "why": "Remembering the right command helps you debug real environments without hunting docs.",
+        "question": "What command lists running containers?",
+        "acceptableAnswers": ["docker ps", "docker container ls", "docker container list"],
+        "failureHint": "Hint: it’s the same command you used in the previous step.",
+        "validation": {
+          "type": "command",
+          "command": "bash -lc \"docker ps --format '{{.Names}} {{.Image}}' 2>/dev/null | grep -q nginx && echo STEP_OK || echo STEP_FAIL\"",
+          "expected": "STEP_OK"
+        }
+      }
+    ],
+    "hintLevels": [
+      {
+        "title": "Concept",
+        "lines": [
+          "Pull a public image from Docker Hub, run it in the background with a port mapping, then list running containers."
+        ]
+      },
+      {
+        "title": "Commands",
+        "lines": ["docker pull nginx", "docker run -d --name web -p 8080:80 nginx", "docker ps"]
+      },
+      {
+        "title": "Full example",
+        "lines": ["docker pull nginx && docker run -d --name web -p 8080:80 nginx && docker ps"]
+      }
+    ],
+    "detect": {
+      "source": "\\bdocker\\s+run\\b[^\\n]*nginx",
+      "flags": "i"
+    }
+  },
+  "terraform": {
+    "instructionTitle": "Terraform workflow",
+    "welcomeTerminal": "Welcome to Terraform Lab",
+    "steps": [
+      {
+        "id": "step-1",
+        "title": "Create main.tf",
+        "description": "Add a minimal Terraform configuration file.",
+        "validation": {
+          "type": "file_exists",
+          "path": "main.tf"
+        }
+      },
+      {
+        "id": "step-2",
+        "title": "Run terraform init",
+        "description": "Initialize providers in your working directory.",
+        "validation": {
+          "type": "command",
+          "command": "test -d .terraform && echo INIT_OK || echo INIT_MISSING",
+          "expected": "INIT_OK"
+        }
+      },
+      {
+        "id": "step-3",
+        "title": "Apply configuration",
+        "description": "Run terraform apply (use -auto-approve when suitable).",
+        "validation": {
+          "type": "command",
+          "command": "bash -lc 'terraform state list 2>/dev/null | grep -q . && echo STATE_OK || echo STATE_MISSING'",
+          "expected": "STATE_OK"
+        }
+      }
+    ],
+    "hintLevels": [
+      {
+        "title": "Concept",
+        "lines": [
+          "Create a working directory, add a minimal Terraform config, initialize providers, then apply the plan."
+        ]
+      },
+      {
+        "title": "Commands",
+        "lines": ["mkdir tf-demo && cd tf-demo", "terraform init", "terraform apply -auto-approve"]
+      },
+      {
+        "title": "Full example",
+        "lines": [
+          "mkdir tf-demo && cd tf-demo",
+          "# Add main.tf with a null_resource or tiny provider block, then: terraform init && terraform apply -auto-approve"
+        ]
+      }
+    ],
+    "detect": {
+      "source": "\\bterraform\\s+apply\\b",
+      "flags": "i"
+    }
+  },
+  "nginx": {
+    "instructionTitle": "Web server in your lab",
+    "welcomeTerminal": "Welcome to Nginx Lab",
+    "steps": [
+      {
+        "id": "step-1",
+        "title": "Confirm nginx is listening",
+        "description": "Use Open App or curl; nginx listens on port 80 in the container.",
+        "validation": {
+          "type": "port_open",
+          "port": 80
+        }
+      },
+      {
+        "id": "step-2",
+        "title": "Inspect web root",
+        "description": "List files under /usr/share/nginx/html in the terminal.",
+        "validation": {
+          "type": "file_exists",
+          "path": "/usr/share/nginx/html/index.html"
+        }
+      },
+      {
+        "id": "step-3",
+        "title": "Fetch the default page",
+        "description": "Try curl -s localhost | head",
+        "validation": {
+          "type": "command",
+          "command": "curl -s localhost 2>/dev/null | head -c 200",
+          "expected": "html"
+        }
+      }
+    ],
+    "hintLevels": [
+      {
+        "title": "Concept",
+        "lines": ["Nginx listens on port 80 in the container; the platform maps it to a temporary URL under /lab/<sessionId>."]
+      },
+      {
+        "title": "Commands",
+        "lines": ["ls -la /usr/share/nginx/html", "curl -s localhost | head -n 5"]
+      },
+      {
+        "title": "Full example",
+        "lines": ["echo '<h1>Hello from the lab</h1>' > /usr/share/nginx/html/index.html", "curl -s localhost"]
+      }
+    ],
+    "detect": {
+      "source": "\\bcurl\\s+-s\\s+localhost\\b",
+      "flags": "i"
+    }
+  }
+}

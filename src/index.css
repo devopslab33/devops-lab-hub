@@ -1,8 +1,8 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap");
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 
 @layer base {
   :root {
@@ -84,4 +84,41 @@
     box-shadow: 0 0 30px hsl(190 95% 50% / 0.08), 0 4px 20px hsl(0 0% 0% / 0.3);
     transform: translateY(-2px);
   }
+
+  .lab-terminal-shell:fullscreen {
+    display: flex;
+    flex-direction: column;
+    height: 100dvh;
+    max-height: none;
+    border-radius: 0;
+    border: none;
+  }
+
+  .lab-terminal-shell:fullscreen .lab-terminal-host {
+    flex: 1 1 auto;
+    min-height: 0;
+    height: auto !important;
+    max-height: none !important;
+  }
+
+  .lab-terminal-host .xterm-viewport {
+    overflow-x: hidden !important;
+  }
+
+  .lab-terminal-host .xterm-viewport::-webkit-scrollbar {
+    width: 9px;
+    height: 9px;
+  }
+
+  .lab-terminal-host .xterm-viewport::-webkit-scrollbar-thumb {
+    background: hsl(220 14% 28% / 0.95);
+    border-radius: 5px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+  }
+
+  .lab-terminal-host .xterm-viewport::-webkit-scrollbar-track {
+    background: hsl(220 14% 8% / 0.5);
+  }
+
 }

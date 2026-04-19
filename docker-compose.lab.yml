@@ -1,0 +1,25 @@
+networks:
+  lab-net:
+    name: lab-net
+
+services:
+  lab-backend:
+    build:
+      context: .
+      dockerfile: docker/lab-server/Dockerfile
+    image: devops-lab-backend:local
+    container_name: lab-backend
+    networks:
+      - lab-net
+    ports:
+      - "3001:3001"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - lab-data:/app/data
+    environment:
+      LAB_SERVER_PORT: "3001"
+      LAB_DOCKER_NETWORK: lab-net
+    restart: unless-stopped
+
+volumes:
+  lab-data:
